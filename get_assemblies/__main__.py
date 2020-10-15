@@ -440,7 +440,7 @@ def fetch_docsums(efetch, assem_links):
                           shell=True, text=True, input=assem_links)
     # logger.debug('Found these uids:\n' +
     #                   uids.stdout)
-    uid_list = uids.stdout.splitlines()
+    uid_list = sorted(uids.stdout.splitlines())
 
     outputs = []
     i = 0
@@ -507,6 +507,7 @@ def remove_invalid_characters(string):
     string = string.replace(')', '')
     string = string.replace(':', '_')
     string = string.replace(';', '')
+    string = string.replace('%', '')
     return string
 
 
@@ -515,7 +516,7 @@ def replace_spaces(string):
     return string
 
 
-def get_prefix(outformat, name, strain):
+def get_prefix(outformat, name, strain, assem_name):
     # Get valid genus and species
     # Omit Candidatus, if present
     logger = logging.getLogger(__name__)
@@ -523,7 +524,7 @@ def get_prefix(outformat, name, strain):
     strain = remove_invalid_characters(strain)
 
     name_list = name.split(' ')
-    if name_list[0] == 'Candidatus':
+    if name_list[0] == 'Candidatus' or name_list[0] == 'uncultured':
         genus = name_list[1]
         species = name_list[2]
         strain_idx = 3
@@ -540,18 +541,31 @@ def get_prefix(outformat, name, strain):
             logger.error(f'Unable to find species for {name} {strain}')
         strain_idx = 2
 
+    if genus in strain and 'sp.' not in name:
+        warn = True
+        logger.debug(f'Seemingly malformed organism name {name} {strain}')
+        logger.debug(f'Strain before {strain}')
+        try:
+            strain = strain.split(' ', 3)[2]
+        except IndexError:
+            strain = '-'
+        logger.debug(f'Strain after {strain}')
+    else:
+        warn = False
+
     if strain == '-':
         if len(name_list) == strain_idx + 1:
             strain = name_list[strain_idx]
         else:
             strain = ' '.join(name_list[strain_idx:])
-    elif genus in strain and 'sp.' not in name:
-        logger.warning(f'Seemingly malformed organism name {name} {strain}')
 
     # Remove spaces
     genus = replace_spaces(genus)
     species = replace_spaces(species)
     strain = replace_spaces(strain)
+
+    if not strain:
+        strain = assem_name
 
     if outformat == 'strain' or not species:
         prefix = strain
@@ -560,6 +574,9 @@ def get_prefix(outformat, name, strain):
         prefix = '_'.join([genus, species, strain])
     elif outformat == 'abbr':
         prefix = '_'.join([genus[0], species, strain])
+
+    if warn:
+        logger.warning(f'Check out this prefix for accuracy: {prefix}')
 
     return prefix
 
@@ -576,6 +593,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                  'fromtype']
     special_keys = ['isolate/strain', 'sequence_type',
                     'accession_type', 'accession']
+    prefixes = {}
     metadata = []
     metadata_file = 'metadata.tab'
     if metadata_append:
@@ -599,7 +617,6 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
             json_error('uid', 'json_docsums', docsums)
 
         # Keep track of strain names so we don't have dups
-        seen = {}
 
         for uid in uids:
             # annotation_type = 'genbank'
@@ -695,12 +712,13 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                 else:
                     debugging('strain_name', 'biosource', uid)
                     strain = '-'
-            try:
-                seen[strain] += 1
-            except KeyError:
-                seen[strain] = 0
-            else:
-                strain = f'{strain}_{seen[strain]}'
+            # try:
+            #     seen[strain] += 1
+            # except KeyError:
+            #     seen[strain] = 0
+            # else:
+            #     strain = f'{strain}_{seen[strain]}'
+            #     logger.debug(f'Adding number to strain {strain}.')
             line.append(strain)
 
             # sequence_type continued
@@ -789,15 +807,23 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
             else:
                 acc_type += annotation_type
             if not accession:
-                logger.warning(f'Unable to find accession for {uid}.')
-                logger.warning(f'{uid} will be skipped.')
+                logger.warning(f'Unable to find accession for {uid}. '
+                               'Skipping...')
                 continue
             else:
                 line.append(annotation_type)
                 line.append(accession)
 
             # Get file prefix
-            prefix = get_prefix(outformat, name, strain)
+            prefix = get_prefix(outformat, name, strain, assem_name)
+            if prefix in prefixes:
+                logger.warning(f'Prefix ({prefix}) has already been seen, '
+                               f'adding assembly name {assem_name} to end.')
+                logger.debug('Already seen assembly ID: {}, new ID {}'
+                             .format(prefixes[prefix], accession))
+                prefix = '_'.join([prefix, assem_name])
+            else:
+                prefixes[prefix] = accession
             line.append(prefix)
 
             # Get FTP path
