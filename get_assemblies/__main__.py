@@ -347,10 +347,11 @@ def search_query(esearch, elink, qtype, query):
                    elink,
                    '-target', 'assembly']
     elif qtype == 'ID':
-        query = shlex.quote(f'txid{query}[ORGN]')
+        # query = shlex.quote(f'txid{query}[ORGN]')
+        query = f'txid{query}[ORGN]'
         command = [esearch,
                    '-db', 'assembly',
-                   '-query', f'{query}']
+                   '-query', query]
 
     # command = ' '.join(command)
 
