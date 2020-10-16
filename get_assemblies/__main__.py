@@ -422,7 +422,7 @@ def check_count(assem_links, query='stdin'):
         exit(1)
     else:
         logger.info(
-            f'Found {count} genomes to download.'
+            f'Found {count} genome(s) to download.'
         )
         logger.info(
             f'Expect {int(count)*5}MB to {int(count)*7}MB of data pending '
@@ -449,8 +449,9 @@ def fetch_docsums(efetch, assem_links):
     outputs = []
     i = 0
     nchunk = int(len(uid_list)/500)
-    logger.info('With {} chunks (500 ids per), this will take around {} secs.'
-                .format(nchunk, nchunk*10))
+    if nchunk > 0:
+        logger.info('With {} chunks (500 ids per), this will take around '
+                    '{} secs.'.format(nchunk, nchunk*10))
     for chunk in tqdm(chunks(uid_list, 500), 'chunk', nchunk):
         command = [f'{efetch}',
                    '-format', 'docsum',
@@ -861,7 +862,7 @@ def download_genomes(o, dl_mapping):
                'ffn': 'cds_from_genomic.fna.gz'}
 
     nacc = len(dl_mapping)
-    logger.info('Downloading {} files.'.format(nacc * len(o)))
+    logger.info('Downloading {} file(s).'.format(nacc * len(o)))
     for acc in tqdm(dl_mapping, 'download'):
         dl_base = '_'.join([acc, dl_mapping[acc]['assem_name']])
         dl_base = dl_base.replace(',', '')
