@@ -11,7 +11,7 @@ with open('get_assemblies/__version__.py', 'r') as f:
 with open('README.rst', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-REQUIRES = []
+REQUIRES = ['python3-wget']
 
 kwargs = {
     'name': 'get_assemblies',

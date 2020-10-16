@@ -47,8 +47,10 @@ import urllib
 import re
 import shlex
 import shutil
+import gzip
 # from json import JSONDecoder, JSONDecodeError
 import json
+from tqdm import tqdm
 # from collections import defaultdict
 from signal import signal, SIGPIPE, SIGINT, SIG_DFL
 from .__version__ import __version__
@@ -422,7 +424,8 @@ def check_count(assem_links, query='stdin'):
             f'Found {count} genomes to download.'
         )
         logger.info(
-            f'Expect {int(count)*5}MB to {int(count)*7}MB of data.'
+            f'Expect {int(count)*5}MB to {int(count)*7}MB of data pending '
+            'the chosen file types for download.'
         )
     # return(count)
 
@@ -444,9 +447,10 @@ def fetch_docsums(efetch, assem_links):
 
     outputs = []
     i = 0
-    logger.info('With {} chunks (500 ids per), this may take a while...'
-                .format(int(len(uid_list)/500)))
-    for chunk in chunks(uid_list, 500):
+    nchunk = int(len(uid_list)/500)
+    logger.info('With {} chunks (500 ids per), this will take around {} secs.'
+                .format(nchunk, nchunk*10))
+    for chunk in tqdm(chunks(uid_list, 500), 'chunk', nchunk):
         command = [f'{efetch}',
                    '-format', 'docsum',
                    '-mode', 'json',
@@ -605,7 +609,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
         metadata.append(json_keys + special_keys + ['prefix'])
 
     # for d in decode_stacked_json(docsums):
-    for d in docsums:
+    for d in tqdm(docsums, 'docsums', len(docsums)):
         try:
             json_data = d['result']
         except KeyError:
@@ -855,7 +859,9 @@ def download_genomes(o, dl_mapping):
                'gff': 'genomic.gff.gz',
                'ffn': 'cds_from_genomic.fna.gz'}
 
-    for acc in dl_mapping:
+    nacc = len(dl_mapping)
+    logger.info('Downloading {} files.'.format(nacc * len(o)))
+    for acc in tqdm(dl_mapping, 'download'):
         dl_base = '_'.join([acc, dl_mapping[acc]['assem_name']])
         dl_base = dl_base.replace(',', '')
         for ft in o:
@@ -876,15 +882,18 @@ def download_genomes(o, dl_mapping):
                     uri = uri.replace('GCA_', 'GCF_')
                     dl_gz = wget.download(uri)
                     dl_mapping[acc]['swap'] = True
+                with gzip.open(dl_gz, mode='rb') as gzfh,\
+                        open(out, 'wb') as outfh:
+                    shutil.copyfileobj(gzfh, outfh, 65536)
                 # subprocess.run(['gunzip', dl_gz])
-                shutil.unpack_archive(dl_gz)
-                dl = dl_gz.replace('.gz', '')
-                os.rename(dl, out)
+                # dl = dl_gz.replace('.gz', '')
+                # os.rename(dl, out)
                 if os.path.exists(out):
                     sys.stderr.write('\n')
                     logger.info(
                         f'{out} successfully downloaded.'
                     )
+                    os.remove(dl_gz)
             else:
                 logger.info(
                     f'{out} already found. Skipping.'

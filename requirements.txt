@@ -1,1 +1,1 @@
-wget==3.2
+python3-wget==0.0.2b1
