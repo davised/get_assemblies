@@ -226,8 +226,8 @@ def run_argparse():
             action='store_true', default=False
         )
         p.add_argument(
-            '-f', '--outformat', help='Output file prefix. [abbr]', type=str,
-            default='abbr', choices=['abbr', 'full', 'strain']
+            '-f', '--outformat', help='Output file prefix. [full]', type=str,
+            default='full', choices=['abbr', 'full', 'strain']
         )
         p.add_argument(
             '-o', help='Output file types.', type=str,
