@@ -450,8 +450,16 @@ def fetch_docsums(efetch, assem_links):
     i = 0
     nchunk = int(len(uid_list)/500)
     if nchunk > 0:
+        units = 'secs'
+        length = nchunk*10
+        if length > 60:
+            units = 'mins'
+            length = length/60
+            if length > 60:
+                units = 'hours'
+                length = length/60
         logger.info('With {} chunks (500 ids per), this will take around '
-                    '{} secs.'.format(nchunk, nchunk*10))
+                    '{} {}.'.format(nchunk, int(length), units))
     for chunk in tqdm(chunks(uid_list, 500), 'chunk', nchunk):
         command = [f'{efetch}',
                    '-format', 'docsum',
@@ -572,6 +580,9 @@ def get_prefix(outformat, name, strain, assem_name):
 
     if not strain:
         strain = assem_name
+
+    if 'substr.' in strain:
+        strain = strain.replace('substr.', 'substr')
 
     if outformat == 'strain' or not species:
         prefix = strain
