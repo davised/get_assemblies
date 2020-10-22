@@ -7,9 +7,11 @@ get_assemblies
 Installation
 ------------
 
-get_assemblies is distributed on `PyPI <https://pypi.org>`_ as a universal
-wheel and is available on Linux/macOS and supports Python 3.7+. This software
-will work on Windows using `WSL <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
+get_assemblies is distributed on `PyPI
+<https://pypi.org/project/get-assemblies>`_ as a universal wheel and is
+available on Linux/macOS and supports Python 3.7+. This software will work on
+Windows using `WSL
+<https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
 get_assemblies depends on `NCBI Entrez Direct <https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_
 which requires Perl. Perl is installed by default on most \*nix systems. If
