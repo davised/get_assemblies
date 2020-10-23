@@ -45,7 +45,7 @@ import xml.etree.ElementTree as ET
 import wget
 import urllib
 import re
-import shlex
+# import shlex
 import shutil
 import gzip
 # from json import JSONDecoder, JSONDecodeError
@@ -333,36 +333,30 @@ def validate_inputs(args):
     return(args, exes)
 
 
-def search_query(esearch, elink, qtype, query):
+def search_query(esearch, efilter, qtype, query):
     logger = logging.getLogger(__name__)
     # returns list of assembly IDs
     # input is organism search or taxid
     command = []
     if qtype == 'text':
-        query = shlex.quote(f'{query}[ORGN]')
+        query = f'{query}[ORGN]'
         command = [esearch,
-                   '-db', 'genome',
-                   '-query', f'{query}',
-                   '|',
-                   elink,
-                   '-target', 'assembly']
+                   '-db', 'assembly',
+                   '-query', query]
     elif qtype == 'ID':
-        # query = shlex.quote(f'txid{query}[ORGN]')
         query = f'txid{query}[ORGN]'
         command = [esearch,
                    '-db', 'assembly',
                    '-query', query]
 
-    # command = ' '.join(command)
+    filt_cmd = [efilter, '-query', 'latest']
 
-    logger.debug('Running command:\n' + ' '.join(command))
-    if qtype == 'text':
-        output = subprocess.run(' '.join(command), stdout=subprocess.PIPE,
-                                shell=True, text=True)
-    elif qtype == 'ID':
-        output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
-                                text=True)
-    return(output.stdout)
+    logger.debug('Running command:\n' + ' '.join(command + ['|'] + filt_cmd))
+    search_res = subprocess.run(command, stdout=subprocess.PIPE, text=True)
+    filt_res = subprocess.run(filt_cmd, input=search_res.stdout, text=True,
+                              stdout=subprocess.PIPE)
+
+    return(filt_res.stdout)
 
 
 def get_assem_links(epost, infile, qtype):
@@ -468,10 +462,25 @@ def fetch_docsums(efetch, assem_links):
                    '-id', ','.join(chunk)]
         # command += ','.join(chunk)
         logger.debug('Running this command:\n' + ' '.join(command))
+        jsondata = []
 
-        output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
-                                text=True)
-        jsondata = json.loads(output.stdout)
+        for j in range(5):
+            output = subprocess.run(command, stdout=subprocess.PIPE,
+                                    shell=False, text=True)
+
+            try:
+                jsondata = json.loads(output.stdout)
+            except json.JSONDecodeError:
+                msg = 'No JSON output detected. Retrying. ({})'
+                logger.warning(msg.format(j+1))
+            else:
+                break
+        if not jsondata:
+            msg = 'Unable to download chunk from NCBI.'
+            logger.critical(msg)
+            msg = 'Check settings and try again later.'
+            logger.critical(msg)
+            exit(-1)
         with open(f'docsums{i}.json', 'w') as docsumfh:
             json.dump(jsondata, docsumfh, indent=4)
             docsumfh.write('\n')
@@ -919,12 +928,14 @@ def main():
 
     # assem_ids is a list of NCBI assembly IDs
     if args.intype == 'organism':
-        assem_links = search_query(exes['esearch'], exes['elink'],
+        assem_links = search_query(exes['esearch'], exes['efilter'],
                                    args.type, args.query)
     elif args.intype == 'assembly_ids':
         assem_links = get_assem_links(exes['epost'], args.infile, args.type)
     elif args.intype == 'nuccore_ids':
         assem_links = convert_nuc_to_assem(exes['elink'], args.infile)
+    with open('.assemlinks', 'wt') as afh:
+        afh.write(assem_links)
 
     if args.intype in ['organism',
                        'assembly_ids',
