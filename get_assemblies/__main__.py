@@ -33,7 +33,7 @@
 # MODIFICATIONS.
 from __future__ import print_function
 import fileinput
-import sys
+# import sys
 import argparse
 # import csv
 import os
@@ -50,8 +50,10 @@ import shutil
 import gzip
 # from json import JSONDecoder, JSONDecodeError
 import json
-from tqdm import tqdm
+# from tqdm import tqdm
 # from collections import defaultdict
+from rich.logging import RichHandler
+from rich.progress import track
 from signal import signal, SIGPIPE, SIGINT, SIG_DFL
 from .__version__ import __version__
 signal(SIGPIPE, SIG_DFL)
@@ -85,15 +87,16 @@ class DownloadEdirect(argparse.Action):
         os.chdir(dlpath)
         out_file = os.path.join(dlpath, 'edirect.tar.gz')
         url = 'ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/edirect.tar.gz'
-        # sys.stderr.write('Downloading edirect.tar.gz from NCBI.\n')
         dl_file(url, out_file)
         logger.info(f'Installing edirect in {prefix}. Running setup.sh.')
         shutil.unpack_archive(out_file, dlpath, 'gztar')
         os.remove(out_file)
         subprocess.run([os.path.join(prefix, 'setup.sh')])
-        logger.info('Add given directory to $PATH to continue.')
+        logger.info('Add given directory {} to [green]$PATH[/green] to '
+                    'continue.'.format(prefix), extra={'markup': True})
         logger.info('This script will find ~/edirect by default.')
-        logger.info('Alternatively, set $EDIRECT environment variable.')
+        logger.info('Alternatively, set [green]$EDIRECT[/green] environment '
+                    'variable.', extra={'markup': True})
         parser.exit()
 
 
@@ -119,26 +122,30 @@ def edirect_dir(x):
     """
     'Type' for argparse - checks that edirect path is present.
     """
+    init_logger(1)
+    logger = logging.getLogger(__name__)
     if not os.path.exists(os.path.join(x, 'edirect.pl')):
-        msg = '\n#### - ! {} does NOT appear to be a valid edirect path' \
-              ' ! - ####\n'
-        sys.stderr.write(msg.format(x) + '\n')
-        msg = 'Please specify a valid edirect path in the script and try '\
-              'again.'
-        raise argparse.ArgumentTypeError(msg)
+        msg = ('Given path [bold magenta]{}[/bold magenta] does '
+               '[bold red]NOT[/bold red] appear to be a valid edirect path.')
+        logger.error(msg.format(x), extra={'markup': True})
+        msg = ('Please specify a valid edirect path with '
+               '[bold magenta]--edirect[/bold magenta] and try again.')
+        logger.error(msg, extra={'markup': True})
+        exit()
     return x
 
 
 def init_logger(debug, logfile=''):
     logger = logging.getLogger()
-    ch = logging.StreamHandler()
+    # ch = logging.StreamHandler()
+    ch = RichHandler(rich_tracebacks=True)
     logger.setLevel(logging.DEBUG)
     if debug:
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
+    # ch.setFormatter(formatter)
     logger.addHandler(ch)
 
     if logfile:
@@ -256,8 +263,8 @@ def run_argparse():
     if not args.intype:
         parser.print_help()
         exit()
-    if args.debug:
-        pp.pprint(args)
+    # if args.debug:
+    #     pp.pprint(args)
     return args
 
 
@@ -338,6 +345,7 @@ def validate_inputs(args):
         else:
             eutil_critical(util)
 
+    # logger.debug(pp.pformat(args))
     logger.debug(pp.pformat(args))
     logger.debug(pp.pformat(exes))
     return(args, exes)
@@ -358,6 +366,7 @@ def search_query(esearch, efilter, qtype, query):
 
     command = [esearch, '-db', 'assembly', '-query', query]
 
+    # logger.debug('Running command:\n' + ' '.join(command))
     logger.debug('Running command:\n' + ' '.join(command))
     search_res = subprocess.run(command, stdout=subprocess.PIPE, text=True)
 
@@ -424,7 +433,7 @@ def check_count(assem_links, query='stdin'):
             f'Found {count} genome(s) to download.'
         )
         logger.info(
-            f'Expect {int(count)*5}MB to {int(count)*7}MB of data pending '
+            f'Expect {int(count)*5} MB to {int(count)*7} MB of data pending '
             'the chosen file types for download.'
         )
     # return(count)
@@ -459,14 +468,15 @@ def fetch_docsums(efetch, assem_links):
                 length = length/60
         logger.info('With {} chunks (500 ids per), this will take around '
                     '{} {}.'.format(nchunk, int(length), units))
-    for chunk in tqdm(chunks(uid_list, 500), 'chunk', nchunk):
+    for chunk in track(chunks(uid_list, 500), 'chunk', nchunk):
         command = [f'{efetch}',
                    '-format', 'docsum',
                    '-mode', 'json',
                    '-db', 'assembly',
                    '-id', ','.join(chunk)]
         # command += ','.join(chunk)
-        logger.debug('Running this command:\n' + ' '.join(command))
+        # logger.debug('Running this command:\n' + ' '.join(command))
+        logger.debug('Running this command:' + ' '.join(command))
         jsondata = []
 
         for j in range(5):
@@ -636,7 +646,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
         metadata.append(json_keys + special_keys + ['prefix'])
 
     # for d in decode_stacked_json(docsums):
-    for d in tqdm(docsums, 'docsums', len(docsums)):
+    for d in track(docsums, 'docsums', len(docsums)):
         try:
             json_data = d['result']
         except KeyError:
@@ -888,7 +898,7 @@ def download_genomes(o, dl_mapping):
 
     nacc = len(dl_mapping)
     logger.info('Downloading {} file(s).'.format(nacc * len(o)))
-    for acc in tqdm(dl_mapping, 'download'):
+    for acc in track(dl_mapping, 'download'):
         dl_base = '_'.join([acc, dl_mapping[acc]['assem_name']])
         dl_base = dl_base.replace(',', '')
         for ft in o:
@@ -916,7 +926,7 @@ def download_genomes(o, dl_mapping):
                 # dl = dl_gz.replace('.gz', '')
                 # os.rename(dl, out)
                 if os.path.exists(out):
-                    sys.stderr.write('\n')
+                    # sys.stderr.write('\n')
                     logger.info(
                         f'{out} successfully downloaded.'
                     )
