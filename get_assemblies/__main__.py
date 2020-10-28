@@ -40,7 +40,7 @@ import os
 import logging
 import pprint as pp
 import subprocess
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 # import json
 import wget
 import urllib
@@ -58,6 +58,7 @@ signal(SIGPIPE, SIG_DFL)
 signal(SIGINT, SIG_DFL)
 
 NOT_WHITESPACE = re.compile(r'[^\s]')
+OUTPUTS = ('fna', 'ffn', 'gff', 'gbk', 'faa')
 
 
 class DownloadEdirect(argparse.Action):
@@ -65,6 +66,8 @@ class DownloadEdirect(argparse.Action):
         super().__init__(nargs=nargs, **kw)
 
     def __call__(self, parser, namespace, values, option_string=None):
+        init_logger(True)
+        logger = logging.getLogger(__name__)
         if values:
             prefix = values
         else:
@@ -82,19 +85,25 @@ class DownloadEdirect(argparse.Action):
         os.chdir(dlpath)
         out_file = os.path.join(dlpath, 'edirect.tar.gz')
         url = 'ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/edirect.tar.gz'
-        sys.stderr.write('Downloading edirect.tar.gz from NCBI.\n')
-        if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
-            with urllib.request.urlopen(url) as response, \
-                    open(out_file, 'wb') as tarfh:
-                shutil.copyfileobj(response, tarfh)
-        sys.stderr.write(f'Installing edirect in {prefix}. Running setup.sh\n')
+        # sys.stderr.write('Downloading edirect.tar.gz from NCBI.\n')
+        dl_file(url, out_file)
+        logger.info(f'Installing edirect in {prefix}. Running setup.sh.')
         shutil.unpack_archive(out_file, dlpath, 'gztar')
         os.remove(out_file)
         subprocess.run([os.path.join(prefix, 'setup.sh')])
-        sys.stderr.write('\nAdd given directory to $PATH to continue.\n')
-        sys.stderr.write('This script will find ~/edirect by default.\n')
-        sys.stderr.write('Alternatively, set $EDIRECT environment variable.\n')
+        logger.info('Add given directory to $PATH to continue.')
+        logger.info('This script will find ~/edirect by default.')
+        logger.info('Alternatively, set $EDIRECT environment variable.')
         parser.exit()
+
+
+def dl_file(url, out_file):
+    logger = logging.getLogger(__name__)
+    logger.debug('Downloading file {} to {}'.format(url, out_file))
+    if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
+        with urllib.request.urlopen(url) as response, \
+                open(out_file, 'wb') as tarfh:
+            shutil.copyfileobj(response, tarfh)
 
 
 def extant_file(x):
@@ -120,7 +129,7 @@ def edirect_dir(x):
     return x
 
 
-def init_logger(debug):
+def init_logger(debug, logfile=''):
     logger = logging.getLogger()
     ch = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
@@ -128,12 +137,14 @@ def init_logger(debug):
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)
-    fh = logging.FileHandler('get_assemblies.log', 'a')
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
-    fh.setFormatter(formatter)
     logger.addHandler(ch)
-    logger.addHandler(fh)
+
+    if logfile:
+        fh = logging.FileHandler(logfile, 'a')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
 
 def run_argparse():
@@ -241,7 +252,7 @@ def run_argparse():
         )
 
     args = parser.parse_args()
-    init_logger(args.debug)
+    init_logger(args.debug, logfile='get_assemblies.log')
     if not args.intype:
         parser.print_help()
         exit()
@@ -278,7 +289,6 @@ def eutil_critical(name):
 
 def validate_inputs(args):
     logger = logging.getLogger(__name__)
-    OUTPUTS = ('fna', 'ffn', 'gff', 'gbk', 'faa')
 
     if 'genomes' in args.function and 'metadata' not in args.function:
         if args.intype != 'json_file':
@@ -340,23 +350,18 @@ def search_query(esearch, efilter, qtype, query):
     command = []
     if qtype == 'text':
         query = f'{query}[ORGN]'
-        command = [esearch,
-                   '-db', 'assembly',
-                   '-query', query]
     elif qtype == 'ID':
         query = f'txid{query}[ORGN]'
-        command = [esearch,
-                   '-db', 'assembly',
-                   '-query', query]
 
-    filt_cmd = [efilter, '-query', 'latest']
+    query = query + ' AND latest [PROP] NOT '\
+        'partial-genome-representation [PROP]'
 
-    logger.debug('Running command:\n' + ' '.join(command + ['|'] + filt_cmd))
+    command = [esearch, '-db', 'assembly', '-query', query]
+
+    logger.debug('Running command:\n' + ' '.join(command))
     search_res = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-    filt_res = subprocess.run(filt_cmd, input=search_res.stdout, text=True,
-                              stdout=subprocess.PIPE)
 
-    return(filt_res.stdout)
+    return(search_res.stdout)
 
 
 def get_assem_links(epost, infile, qtype):
@@ -398,7 +403,7 @@ def convert_nuc_to_assem(elink, infile):
 
 def check_count(assem_links, query='stdin'):
     logger = logging.getLogger(__name__)
-    entrez_direct = ET.fromstring(assem_links)
+    entrez_direct = ElementTree.fromstring(assem_links)
     try:
         count = entrez_direct.find('Count').text
     except AttributeError:
