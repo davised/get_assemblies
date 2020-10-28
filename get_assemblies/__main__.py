@@ -53,6 +53,7 @@ import json
 # from tqdm import tqdm
 # from collections import defaultdict
 from rich.logging import RichHandler
+from rich.console import Console
 from rich.progress import track
 from signal import signal, SIGPIPE, SIGINT, SIG_DFL
 from .__version__ import __version__
@@ -122,7 +123,7 @@ def edirect_dir(x):
     """
     'Type' for argparse - checks that edirect path is present.
     """
-    init_logger(1)
+    init_logger(True)
     logger = logging.getLogger(__name__)
     if not os.path.exists(os.path.join(x, 'edirect.pl')):
         msg = ('Given path [bold magenta]{}[/bold magenta] does '
@@ -137,20 +138,17 @@ def edirect_dir(x):
 
 def init_logger(debug, logfile=''):
     logger = logging.getLogger()
-    # ch = logging.StreamHandler()
+
     ch = RichHandler(rich_tracebacks=True)
     logger.setLevel(logging.DEBUG)
     if debug:
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    # ch.setFormatter(formatter)
     logger.addHandler(ch)
 
     if logfile:
-        fh = logging.FileHandler(logfile, 'a')
-        fh.setFormatter(formatter)
+        fh = RichHandler(console=Console(file=open(logfile, 'a')))
         logger.addHandler(fh)
 
 
