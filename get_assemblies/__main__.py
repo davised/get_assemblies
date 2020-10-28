@@ -582,7 +582,7 @@ def get_prefix(outformat, name, strain, assem_name):
         logger.debug(f'Seemingly malformed organism name {name} {strain}')
         logger.debug(f'Strain before {strain}')
         try:
-            strain = strain.split(' ', 3)[2]
+            strain = strain.split(' ',  2)[2]
         except IndexError:
             strain = '-'
         logger.debug(f'Strain after {strain}')
