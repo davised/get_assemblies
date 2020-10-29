@@ -218,7 +218,7 @@ def run_argparse():
     for p in p_assemlinks:
         p.add_argument(
             '--function', help='check counts, download metadata,'
-                               ' or genomes. [counts]', type=str,
+                               ' or genomes. [check]', type=str,
             default=['check'], choices=['check', 'metadata', 'genomes'],
             nargs='+'
         )
