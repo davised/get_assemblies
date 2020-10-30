@@ -285,6 +285,10 @@ def run_argparse():
             action='store_true', default=False
         )
         p.add_argument(
+            '--keepmulti', help='By default, genomes from large multi-isolate'
+            'studies are removed.', action='store_true', default=False
+        )
+        p.add_argument(
             '--force', help='Force download attempt of low-quality genomes.',
             action='store_true', default=False
         )
@@ -748,21 +752,28 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                 exclfromrefseq = []
             skip = False
             reason = ''
+            # https://www.ncbi.nlm.nih.gov/assembly/help/anomnotrefseq/
             for item in exclfromrefseq:
+                annotation_type = 'genbank'
                 if item == 'derived from single cell':
                     sequence_type = 'SAG'
-                    annotation_type = 'genbank'
                 if item == 'derived from metagenome':
                     sequence_type = 'metagenome'
-                    annotation_type = 'genbank'
                 if item == 'derived from environmental source':
                     sequence_type = 'environmental'
-                    annotation_type = 'genbank'
+                if item == 'from large multi-isolate project':
+                    sequence_type = 'multi-isolate'
                 if item in ('low contig N50', 'many frameshifted proteins',
-                            'low quality sequence', 'genome length too large'):
+                            'low quality sequence', 'genome length too large',
+                            'contaminated', 'abnormal gene to sequence ratio',
+                            'fragmented assembly', 'genome length too small',
+                            'low gene count', 'missing ribosomal protein '
+                            'genes', 'missing rRNA genes', 'missing tRNA '
+                            'genes', 'partial', 'untrustworthy as type',
+                            'chimeric', 'hybrid', 'misassembled', 'sequence '
+                            'duplications', 'unverified source organism'):
                     skip = True
                     reason = item
-                    annotation_type = 'genbank'
 
             # Strain
             strain = ''
