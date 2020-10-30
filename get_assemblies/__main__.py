@@ -51,6 +51,7 @@ import gzip
 import json
 # from tqdm import tqdm
 # from collections import defaultdict
+from math import ceil
 from urllib.request import urlopen
 from urllib.error import URLError
 from rich.logging import RichHandler
@@ -505,7 +506,7 @@ def fetch_docsums(efetch, assem_links):
 
     outputs = []
     i = 0
-    nchunk = int(len(uid_list)/500)
+    nchunk = ceil(len(uid_list)/500)
     if nchunk > 0:
         units = 'secs'
         length = nchunk*10
@@ -525,7 +526,7 @@ def fetch_docsums(efetch, assem_links):
                    '-id', ','.join(chunk)]
         # command += ','.join(chunk)
         # logger.debug('Running this command:\n' + ' '.join(command))
-        logger.debug('Running this command:' + ' '.join(command))
+        logger.debug('Running this command: ' + ' '.join(command))
         jsondata = []
 
         for j in range(5):
@@ -672,7 +673,7 @@ def get_prefix(outformat, name, strain, assem_name):
 
 
 def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
-                     docsums):
+                     docsums, keepmulti):
     # Return dl_mapping dict at the end
     logger = logging.getLogger(__name__)
     dl_mapping = {}
@@ -763,6 +764,9 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                     sequence_type = 'environmental'
                 if item == 'from large multi-isolate project':
                     sequence_type = 'multi-isolate'
+                    if not keepmulti:
+                        skip = True
+                        reason = item
                 if item in ('low contig N50', 'many frameshifted proteins',
                             'low quality sequence', 'genome length too large',
                             'contaminated', 'abnormal gene to sequence ratio',
@@ -822,13 +826,13 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
             if skip:
                 if force:
                     logger.warning(
-                        f'Assembly {uid} - {strain} is low quality due'
-                        f' to {reason}. --force enabled; attempting download.'
+                        f'Assembly {uid} - {strain} is being skipped due '
+                        f'to "{reason}". --force enabled; attempting download.'
                     )
                 else:
                     logger.warning(
-                        f'Assembly {uid} - {strain} is low quality due'
-                        f' to {reason}. Skipping.'
+                        f'Assembly {uid} - {strain} is being skipped due '
+                        f'to "{reason}".'
                     )
                     continue
 
@@ -914,9 +918,9 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
             # Get file prefix
             prefix = get_prefix(outformat, name, strain, assem_name)
             if prefix in prefixes:
-                logger.warning(f'Prefix ({prefix}) has already been seen, '
-                               f'adding assembly name {assem_name} to end.')
-                logger.debug('Already seen assembly ID: {}, new ID {}'
+                logger.warning(f'Prefix "{prefix}" has already been seen, '
+                               f'adding assembly name "{assem_name}" to end.')
+                logger.debug('Already seen assembly ID: "{}", new ID "{}"'
                              .format(prefixes[prefix], accession))
                 prefix = '_'.join([prefix, assem_name])
             else:
@@ -1044,7 +1048,7 @@ def main():
             docsums = fetch_docsums(exes['efetch'], assem_links)
         dl_mapping = extract_metadata(args.force, args.metadata_append,
                                       args.outformat, args.typestrain,
-                                      args.annotation, docsums)
+                                      args.annotation, docsums, args.keepmulti)
 
     if 'genomes' in args.function:
         download_genomes(args.o, dl_mapping)
