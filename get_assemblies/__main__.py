@@ -42,8 +42,7 @@ import pprint as pp
 import subprocess
 import xml.etree.ElementTree as ElementTree
 # import json
-import wget
-import urllib
+# import wget
 import re
 # import shlex
 import shutil
@@ -52,9 +51,23 @@ import gzip
 import json
 # from tqdm import tqdm
 # from collections import defaultdict
+from urllib.request import urlopen
+from urllib.error import URLError
 from rich.logging import RichHandler
 from rich.console import Console
-from rich.progress import track
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    TextColumn,
+    TransferSpeedColumn,
+    TimeRemainingColumn,
+    Progress,
+    # TaskID,
+    track,
+)
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from functools import partial
 from signal import signal, SIGPIPE, SIGINT, SIG_DFL
 from .__version__ import __version__
 signal(SIGPIPE, SIG_DFL)
@@ -105,9 +118,43 @@ def dl_file(url, out_file):
     logger = logging.getLogger(__name__)
     logger.debug('Downloading file {} to {}'.format(url, out_file))
     if not os.path.exists(out_file) or os.path.getsize(out_file) == 0:
-        with urllib.request.urlopen(url) as response, \
-                open(out_file, 'wb') as tarfh:
+        with urlopen(url) as response, open(out_file, 'wb') as tarfh:
             shutil.copyfileobj(response, tarfh)
+
+
+def dl_gzip(pbar, task_id, uri, filename, out, acc, swap):
+    try:
+        copy_url(pbar, task_id, uri, filename)
+    except URLError:
+        pbar.reset(task_id, start=False)
+        uri = uri.replace('GCA_', 'GCF_')
+        filename = filename.replace('GCA_', 'GCF_')
+        copy_url(uri, task_id, uri, filename)
+        # swap = True
+    with gzip.open(filename, mode='rb') as gzfh,\
+            open(out, 'wb') as outfh:
+        shutil.copyfileobj(gzfh, outfh, 65536)
+    # subprocess.run(['gunzip', dl_gz])
+    # dl = dl_gz.replace('.gz', '')
+    # os.rename(dl, out)
+    if os.path.exists(out):
+        # sys.stderr.write('\n')
+        os.remove(filename)
+    return out
+
+
+def copy_url(pbar, task_id, uri, path) -> None:
+    """Copy data from a url to a local file."""
+    with urlopen(uri) as response:
+        # This will break if the response doesn't contain content length
+        pbar.update(task_id, total=int(response.info()["Content-length"]))
+        with open(path, "wb") as dest_file:
+            pbar.start_task(task_id)
+            pbar.update(task_id, visible=True)
+            for data in iter(partial(response.read, 32768), b""):
+                dest_file.write(data)
+                pbar.update(task_id, advance=len(data))
+    pbar.update(task_id, visible=False)
 
 
 def extant_file(x):
@@ -896,43 +943,61 @@ def download_genomes(o, dl_mapping):
 
     nacc = len(dl_mapping)
     logger.info('Downloading {} file(s).'.format(nacc * len(o)))
-    for acc in track(dl_mapping, 'download'):
+
+    # Generate urls to download
+    urls = []
+    for acc in dl_mapping:
         dl_base = '_'.join([acc, dl_mapping[acc]['assem_name']])
         dl_base = dl_base.replace(',', '')
         for ft in o:
             # Get output filename
             out = dl_mapping[acc]['prefix'] + '.' + ft
             if not os.path.exists(out):
-                logger.debug(
-                    f'Downloading {acc} to {out}.'
-                )
                 uri = dl_mapping[acc]['ftp_path'] + \
                     '/' + dl_base + '_' + filemap[ft]
                 if dl_mapping[acc]['swap']:
                     uri = uri.replace('GCA_', 'GCF_')
                 logger.debug(f'URL {uri} for {acc} generated.')
-                try:
-                    dl_gz = wget.download(uri)
-                except urllib.error.URLError:
-                    uri = uri.replace('GCA_', 'GCF_')
-                    dl_gz = wget.download(uri)
-                    dl_mapping[acc]['swap'] = True
-                with gzip.open(dl_gz, mode='rb') as gzfh,\
-                        open(out, 'wb') as outfh:
-                    shutil.copyfileobj(gzfh, outfh, 65536)
-                # subprocess.run(['gunzip', dl_gz])
-                # dl = dl_gz.replace('.gz', '')
-                # os.rename(dl, out)
-                if os.path.exists(out):
-                    # sys.stderr.write('\n')
-                    logger.info(
-                        f'{out} successfully downloaded.'
-                    )
-                    os.remove(dl_gz)
+                urls.append((uri, out, acc, dl_mapping[acc]['swap']))
             else:
                 logger.info(
                     f'{out} already found. Skipping.'
                 )
+
+    progress = Progress(
+        TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
+        BarColumn(bar_width=None),
+        "[progress.percentage]{task.percentage:>3.1f}%",
+        "•",
+        DownloadColumn(),
+        "•",
+        TransferSpeedColumn(),
+        "•",
+        TimeRemainingColumn(),
+    )
+
+    results = []
+    with progress as pbar:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for uri, out, acc, swap in urls:
+                logger.debug(
+                    f'Downloading {acc} to {out}.'
+                )
+                filename = uri.split("/")[-1]
+                task_id = pbar.add_task('download', filename=out, start=False,
+                                        visible=False)
+                future = pool.submit(
+                    dl_gzip, progress, task_id, uri, filename, out, acc, swap)
+                results.append(future)
+                # dl_mapping[acc]['swap'] = dl_gzip(
+                #     pbar, task_id, uri, filename, out, acc, swap)
+
+    for future in as_completed(results):
+        output = future.result()
+        if os.path.exists(output):
+            logger.info(f'{output} successfully downloaded.')
+        else:
+            logger.error(f'{output} was unable to be downloaded.')
 
 
 def main():
@@ -947,8 +1012,11 @@ def main():
         assem_links = get_assem_links(exes['epost'], args.infile, args.type)
     elif args.intype == 'nuccore_ids':
         assem_links = convert_nuc_to_assem(exes['elink'], args.infile)
-    with open('.assemlinks', 'wt') as afh:
-        afh.write(assem_links)
+    try:
+        with open('.assemlinks', 'wt') as afh:
+            afh.write(assem_links)
+    except UnboundLocalError:
+        pass
 
     if args.intype in ['organism',
                        'assembly_ids',
