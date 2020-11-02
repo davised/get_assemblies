@@ -418,7 +418,13 @@ def search_query(esearch, efilter, qtype, query):
 
     # logger.debug('Running command:\n' + ' '.join(command))
     logger.debug('Running command:\n' + ' '.join(command))
-    search_res = subprocess.run(command, stdout=subprocess.PIPE, text=True)
+    try:
+        search_res = subprocess.run(command, stdout=subprocess.PIPE, text=True,
+                                    check=True)
+    except subprocess.CalledProcessError as e:
+        logger.critical('There was an error running esearch.')
+        logger.critical(f'Check the error: "{e}" and try again.')
+        exit(1)
 
     return(search_res.stdout)
 
@@ -435,8 +441,14 @@ def get_assem_links(epost, infile, qtype):
                '-format', f'{qtype}']
 
     # command = ' '.join(command)
-    output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
-                            text=True, input='\n'.join(assem_ids))
+    try:
+        output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
+                                text=True, input='\n'.join(assem_ids),
+                                check=True)
+    except subprocess.CalledProcessError as e:
+        logger.critical('There was an error running epost.')
+        logger.critical(f'Check the error: "{e}" and try again.')
+        exit(1)
     return(output.stdout)
 
 
@@ -455,14 +467,28 @@ def convert_nuc_to_assem(elink, infile):
                ','.join(nuccore_ids)]
 
     # command = ' '.join(command)
-    output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
-                            text=True)
+    try:
+        output = subprocess.run(command, stdout=subprocess.PIPE, shell=False,
+                                text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        logger.critical('There was an error running elink.')
+        logger.critical(f'Check the error: "{e}" and try again.')
+        exit(1)
+
     return(output.stdout)
 
 
 def check_count(assem_links, query='stdin'):
     logger = logging.getLogger(__name__)
-    entrez_direct = ElementTree.fromstring(assem_links)
+    try:
+        entrez_direct = ElementTree.fromstring(assem_links)
+    except ElementTree.ParseError:
+        logger.critical(
+            'No output from edirect search.'
+        )
+        logger.critical(
+            'Check input(s) and try again.'
+        )
     try:
         count = entrez_direct.find('Count').text
     except AttributeError:
@@ -498,8 +524,14 @@ def chunks(uidl, n):
 def fetch_docsums(efetch, assem_links):
     logger = logging.getLogger(__name__)
     command = [f'{efetch}', '-format', 'uid']
-    uids = subprocess.run(' '.join(command), stdout=subprocess.PIPE,
-                          shell=True, text=True, input=assem_links)
+    try:
+        uids = subprocess.run(' '.join(command), stdout=subprocess.PIPE,
+                              shell=True, text=True, input=assem_links,
+                              check=True)
+    except subprocess.CalledProcessError as e:
+        logger.critical('There was an error running efetch.')
+        logger.critical(f'Check the error: "{e}" and try again.')
+        exit(1)
     # logger.debug('Found these uids:\n' +
     #                   uids.stdout)
     uid_list = sorted(uids.stdout.splitlines())
@@ -530,8 +562,13 @@ def fetch_docsums(efetch, assem_links):
         jsondata = []
 
         for j in range(5):
-            output = subprocess.run(command, stdout=subprocess.PIPE,
-                                    shell=False, text=True)
+            try:
+                output = subprocess.run(command, stdout=subprocess.PIPE,
+                                        shell=False, text=True, check=True)
+            except subprocess.CalledProcessError as e:
+                logger.critical('There was an error running efetch.')
+                logger.critical(f'Check the error: "{e}" and try again.')
+                exit(1)
 
             try:
                 jsondata = json.loads(output.stdout)
