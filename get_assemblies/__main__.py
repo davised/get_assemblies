@@ -33,24 +33,16 @@
 # MODIFICATIONS.
 from __future__ import print_function
 import fileinput
-# import sys
 import argparse
-# import csv
 import os
 import logging
 import pprint as pp
 import subprocess
 import xml.etree.ElementTree as ElementTree
-# import json
-# import wget
 import re
-# import shlex
 import shutil
 import gzip
-# from json import JSONDecoder, JSONDecodeError
 import json
-# from tqdm import tqdm
-# from collections import defaultdict
 from math import ceil
 from urllib.request import urlopen
 from urllib.error import URLError
@@ -63,7 +55,6 @@ from rich.progress import (
     TransferSpeedColumn,
     TimeRemainingColumn,
     Progress,
-    # TaskID,
     track,
 )
 from concurrent.futures import ThreadPoolExecutor
