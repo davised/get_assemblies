@@ -709,7 +709,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
 
     json_keys = ['uid', 'assemblyname', 'speciesname', 'wgs',
                  'submitterorganization', 'assemblystatus',
-                 'fromtype']
+                 'fromtype', 'lastupdatedate', 'coverage', 'contign50']
     special_keys = ['isolate/strain', 'sequence_type',
                     'accession_type', 'accession']
     prefixes = {}
