@@ -641,9 +641,14 @@ def get_prefix(outformat, name, strain, assem_name):
 
     name_list = name.split(' ')
     if name_list[0] == 'Candidatus' or name_list[0] == 'uncultured':
-        genus = name_list[1]
-        species = name_list[2]
-        strain_idx = 3
+        if len(name_list) > 2:
+            genus = name_list[1]
+            species = name_list[2]
+            strain_idx = 3
+        else:
+            genus = name_list[1]
+            species = 'sp'
+            strain_idx = 2
     else:
         try:
             genus = name_list[0]
