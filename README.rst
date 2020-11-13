@@ -20,7 +20,7 @@ PhD/Masters students and undergraduates are especially encouraged to submit
 issues if they are having trouble using this software.
 
 This software is written in python but has a perl dependency. I'm happy to help
-those who are having trouble with software installs as well.
+those who are having trouble with software installs.
 
 Windows users, please install WSL to make use of this software. Using a Linux
 distribution will make your life as a computational researcher significantly
@@ -49,8 +49,7 @@ Dependencies
 
 Python modules:
 
-1. python3-wget
-2. tqdm
+1. `rich <https://github.com/willmcgugan/rich>`_
 
 See ``requirements.txt`` for more info.
 
@@ -69,7 +68,7 @@ Just tell me how to run it
 
     $ get_assemblies organism 'Pseudomonas fluorescens'
 
-^ This will find all genomes tagged as 'Pseudomonas fluorescens' in NCBI's
+This will find all genomes tagged as 'Pseudomonas fluorescens' in NCBI's
 database. By default, this command will only check to see how many genomes
 fall into this category.
 
@@ -84,7 +83,7 @@ Generally you will want to select a subset from your search. One way to do this
 is to select the lines that include the genomes of interest, and then saving
 the assembly accessions to a file. You can either delete the lines that you
 don't want, or use ``grep`` to pull out the lines that you want to keep. Then
-you can use ``cut -f 11 > accs.txt`` to get the assembly accesions in a file.
+you can use ``cut -f 14 > accs.txt`` to get the assembly accesions in a file.
 
 .. code-block:: bash
 
@@ -158,6 +157,162 @@ More Examples
     $ echo GCA_000269645.2 | get_assemblies assembly_ids -
     2020-10-15 23:18:04,107 - INFO - Found 1 genomes to download.
     2020-10-15 23:18:04,107 - INFO - Expect 5MB to 7MB of data pending the chosen file types for download.
+
+Usage
+-----
+
+.. code-block:: bash
+
+    $ get_assemblies -h
+    usage: get_assemblies [-h] [--debug] [--version] [--dledirect [DLEDIRECT]] {organism,assembly_ids,nuccore_ids,json_input} ...
+
+    Downloads assemblies & annotations from NCBI.
+
+    positional arguments:
+      {organism,assembly_ids,nuccore_ids,json_input}
+                            Choose from this list of input types.
+        organism            Valid NCBI organism or taxids.
+        assembly_ids        Valid NCBI assembly IDs.
+        nuccore_ids         Valid NCBI nucleotide accessions.
+        json_input          Valid NCBI JSON docsums.
+
+optional arguments:
+
+-h, --help            show this help message and exit
+--debug               Turn on debugging messages.
+--version             show program's version number and exit
+--dledirect <[DLEDIRECT]>
+                      Download edirect to given location. [~/edirect]
+
+Organism
+^^^^^^^^
+
+.. code-block:: bash
+
+    $ get_assemblies organism -h
+    usage: get_assemblies organism [-h] [--type {text,ID}] [--function {check,metadata,genomes} [{check,metadata,genomes} ...]]
+                                   [--annotation] [--metadata_append] [--typestrain] [--keepmulti] [--force]
+                                   [-f {abbr,full,strain}] [-o {fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]]
+                                   [--edirect EDIRECT] [--debug]
+                                   query
+
+    positional arguments:
+      query                 Valid NCBI organism text term or ID
+
+optional arguments:
+
+-h, --help            show this help message and exit
+--type <{text,ID}>    Input is text term (default) or ID
+--function <{check,metadata,genomes} [{check,metadata,genomes} ...]>
+                      check counts, download metadata, or genomes. [check]
+--annotation          Require annotation? False by default, True if gbk/faa/ffn requested
+--metadata_append     Append to metadata, not overwrite.
+--typestrain          Only download type strains.
+--keepmulti           By default, genomes from large multi-isolatestudies are removed.
+--force               Force download attempt of low-quality genomes.
+-f <{abbr,full,strain}, --outformat {abbr,full,strain}>
+                      Output file prefix. [full]
+-o <{fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]>
+                      Output file types.
+--edirect EDIRECT     Path to edirect directory.
+--debug               Turn on debugging messages.
+
+Assembly IDs
+^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    $ get_assemblies assembly_ids -h
+    usage: get_assemblies assembly_ids [-h] [--type {acc,uid}]
+                                       [--function {check,metadata,genomes} [{check,metadata,genomes} ...]] [--annotation]
+                                       [--metadata_append] [--typestrain] [--keepmulti] [--force] [-f {abbr,full,strain}]
+                                       [-o {fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]] [--edirect EDIRECT]
+                                       [--debug]
+                                       infile
+
+    positional arguments:
+      infile                Input file with NCBI assembly IDs; "-" for stdin
+
+optional arguments:
+
+-h, --help            show this help message and exit
+--type <{acc,uid}>    Input is Accession (default) or ID
+--function <{check,metadata,genomes} [{check,metadata,genomes} ...]>
+                      check counts, download metadata, or genomes. [check]
+--annotation          Require annotation? False by default, True if gbk/faa/ffn requested
+--metadata_append     Append to metadata, not overwrite.
+--typestrain          Only download type strains.
+--keepmulti           By default, genomes from large multi-isolatestudies are removed.
+--force               Force download attempt of low-quality genomes.
+-f <{abbr,full,strain}, --outformat {abbr,full,strain}>
+                      Output file prefix. [full]
+-o <{fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]>
+                      Output file types.
+--edirect EDIRECT     Path to edirect directory.
+--debug               Turn on debugging messages.
+
+Nucleotide IDs
+^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    $ get_assemblies nuccore_ids -h
+    usage: get_assemblies nuccore_ids [-h] [--function {check,metadata,genomes} [{check,metadata,genomes} ...]] [--annotation]
+                                      [--metadata_append] [--typestrain] [--keepmulti] [--force] [-f {abbr,full,strain}]
+                                      [-o {fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]] [--edirect EDIRECT] [--debug]
+                                      infile
+
+    positional arguments:
+      infile                Input file with NCBI nuccore IDs; "-" for stdin
+
+optional arguments:
+
+-h, --help            show this help message and exit
+--function <{check,metadata,genomes} [{check,metadata,genomes} ...]>
+                      check counts, download metadata, or genomes. [check]
+--annotation          Require annotation? False by default, True if gbk/faa/ffn requested
+--metadata_append     Append to metadata, not overwrite.
+--typestrain          Only download type strains.
+--keepmulti           By default, genomes from large multi-isolatestudies are removed.
+--force               Force download attempt of low-quality genomes.
+-f <{abbr,full,strain}, --outformat {abbr,full,strain}>
+                      Output file prefix. [full]
+-o <{fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]>
+                      Output file types.
+--edirect EDIRECT     Path to edirect directory.
+--debug               Turn on debugging messages.
+
+NCBI JSON Docsum input
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    $ get_assemblies json_input -h
+    usage: get_assemblies json_input [-h] [--function {metadata,genomes} [{metadata,genomes} ...]] [--annotation]
+                                     [--metadata_append] [--typestrain] [--keepmulti] [--force] [-f {abbr,full,strain}]
+                                     [-o {fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]] [--edirect EDIRECT] [--debug]
+                                     jsonfile [jsonfile ...]
+
+    positional arguments:
+      jsonfile              Input JSON file with docsums; "-" for stdin
+
+optional arguments:
+
+-h, --help            show this help message and exit
+--function <{metadata,genomes} [{metadata,genomes} ...]>
+                      Download metadata and/or genomes. [metadata]
+--annotation          Require annotation? False by default, True if gbk/faa/ffn requested
+--metadata_append     Append to metadata, not overwrite.
+--typestrain          Only download type strains.
+--keepmulti           By default, genomes from large multi-isolatestudies are removed.
+--force               Force download attempt of low-quality genomes.
+-f <{abbr,full,strain}, --outformat {abbr,full,strain}>
+                      Output file prefix. [full]
+-o <{fna,ffn,gff,gbk,faa,all} [{fna,ffn,gff,gbk,faa,all} ...]>
+                      Output file types.
+--edirect EDIRECT     Path to edirect directory.
+--debug               Turn on debugging messages.
+
 
 Bugs
 ----
