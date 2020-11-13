@@ -281,6 +281,11 @@ def run_argparse():
             'studies are removed.', action='store_true', default=False
         )
         p.add_argument(
+            '-t', '--threads', help='Number of threads to use for downloads.'
+                                    ' 4 or more is recommended [1]',
+            default=1, type=int, metavar='T'
+        )
+        p.add_argument(
             '--force', help='Force download attempt of low-quality genomes.',
             action='store_true', default=False
         )
@@ -983,7 +988,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
     return dl_mapping
 
 
-def download_genomes(o, dl_mapping):
+def download_genomes(o, dl_mapping, threads):
     logger = logging.getLogger(__name__)
     filemap = {'faa': 'protein.faa.gz',
                'fna': 'genomic.fna.gz',
@@ -1028,7 +1033,7 @@ def download_genomes(o, dl_mapping):
 
     results = []
     with progress as pbar:
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=threads) as pool:
             for uri, out, acc, swap in urls:
                 logger.debug(
                     f'Downloading {acc} to {out}.'
@@ -1086,7 +1091,7 @@ def main():
                                       args.annotation, docsums, args.keepmulti)
 
     if 'genomes' in args.function:
-        download_genomes(args.o, dl_mapping)
+        download_genomes(args.o, dl_mapping, args.threads)
 
 
 if __name__ == '__main__':
