@@ -4,6 +4,28 @@ get_assemblies
 .. contents:: **Table of Contents**
     :backlinks: none
 
+Who might want this software?
+-----------------------------
+
+This software is intended to facilitate the use of the `NCBI assembly database.
+<https://www.ncbi.nlm.nih.gov/assembly>`_
+
+The intended audience is scientific researchers, computational biologists, and
+bioinformaticians who need sequence data for comparative genomics projects.
+
+Anyone using NCBI sequence data (for reference genomes/transcriptomes) can
+benefit as well.
+
+PhD/Masters students and undergraduates are especially encouraged to submit
+issues if they are having trouble using this software.
+
+This software is written in python but has a perl dependency. I'm happy to help
+those who are having trouble with software installs as well.
+
+Windows users, please install WSL to make use of this software. Using a Linux
+distribution will make your life as a computational researcher significantly
+easier.
+
 Installation
 ------------
 
@@ -13,10 +35,10 @@ available on Linux/macOS and supports Python 3.7+. This software will work on
 Windows using `WSL
 <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
-get_assemblies depends on `NCBI Entrez Direct <https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_
-which requires Perl. Perl is installed by default on most \*nix systems. If
-edirect is not currently installed, please run ``get_assemblies --dledirect``
-to install.
+get_assemblies depends on `NCBI Entrez Direct
+<https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_ which requires Perl. Perl is
+installed by default on most \*nix systems. If edirect is not currently
+installed, please run ``get_assemblies --dledirect`` to install.
 
 .. code-block:: bash
 
