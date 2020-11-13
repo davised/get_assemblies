@@ -842,6 +842,8 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                 if sub_value:
                     strain = sub_value
                 elif isolate:
+                    logger.debug(
+                        f'Using isolate from {uid} instead of strain.')
                     strain = isolate
                 else:
                     debugging('strain_name', 'biosource', uid)
