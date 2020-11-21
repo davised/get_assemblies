@@ -534,16 +534,16 @@ def fetch_docsums(efetch, assem_links):
 
     outputs = []
     i = 0
-    nchunk = ceil(len(uid_list)/500)
+    nchunk = ceil(len(uid_list) / 500)
     if nchunk > 0:
         units = 'secs'
-        length = nchunk*10
+        length = nchunk * 10
         if length > 60:
             units = 'mins'
-            length = length/60
+            length = length / 60
             if length > 60:
                 units = 'hours'
-                length = length/60
+                length = length / 60
         logger.info('With {} chunks (500 ids per), this will take around '
                     '{} {}.'.format(nchunk, int(length), units))
     for chunk in track(chunks(uid_list, 500), 'chunk', nchunk):
@@ -560,7 +560,8 @@ def fetch_docsums(efetch, assem_links):
         for j in range(5):
             try:
                 output = subprocess.run(command, stdout=subprocess.PIPE,
-                                        shell=False, text=True, check=True)
+                                        shell=False, text=True, check=True,
+                                        stderr=subprocess.DEVNULL)
             except subprocess.CalledProcessError as e:
                 logger.critical('There was an error running efetch.')
                 logger.critical(f'Check the error: "{e}" and try again.')
@@ -570,7 +571,7 @@ def fetch_docsums(efetch, assem_links):
                 jsondata = json.loads(output.stdout)
             except json.JSONDecodeError:
                 msg = 'No JSON output detected. Retrying. ({})'
-                logger.warning(msg.format(j+1))
+                logger.warning(msg.format(j + 1))
             else:
                 break
         if not jsondata:
@@ -672,7 +673,7 @@ def get_prefix(outformat, name, strain, assem_name):
         logger.debug(f'Seemingly malformed organism name {name} {strain}')
         logger.debug(f'Strain before {strain}')
         try:
-            strain = strain.split(' ',  2)[2]
+            strain = strain.split(' ', 2)[2]
         except IndexError:
             strain = '-'
         logger.debug(f'Strain after {strain}')
