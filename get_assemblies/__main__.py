@@ -46,7 +46,7 @@ import json
 from math import ceil
 from urllib.request import urlopen
 from urllib.error import URLError
-from .pbar import track_wide
+# from .pbar import track_wide
 from rich.logging import RichHandler
 from rich.console import Console
 from rich.progress import (
@@ -57,7 +57,7 @@ from rich.progress import (
     TransferSpeedColumn,
     TimeRemainingColumn,
     Progress,
-#    track,
+    track,
 )
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
@@ -551,7 +551,7 @@ def fetch_docsums(efetch, assem_links):
                 length = length / 60
         logger.info('With {} chunks (500 ids per), this will take around '
                     '{} {}.'.format(nchunk, int(length), units))
-    for chunk in track_wide(chunks(uid_list, 500), 'chunk', nchunk):
+    for chunk in track(chunks(uid_list, 500), 'chunk', nchunk):
         command = [f'{efetch}',
                    '-format', 'docsum',
                    '-mode', 'json',
@@ -740,7 +740,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
         metadata.append(json_keys + special_keys + ['prefix'])
 
     # for d in decode_stacked_json(docsums):
-    for d in track_wide(docsums, 'docsums', len(docsums)):
+    for d in track(docsums, 'docsums', len(docsums)):
         try:
             json_data = d['result']
         except KeyError:
