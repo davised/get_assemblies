@@ -399,7 +399,7 @@ def validate_inputs(args):
     return(args, exes)
 
 
-def search_query(esearch, efilter, qtype, query):
+def search_query(esearch, efilter, qtype, query, typestrain):
     logger = logging.getLogger(__name__)
     # returns list of assembly IDs
     # input is organism search or taxid
@@ -411,6 +411,9 @@ def search_query(esearch, efilter, qtype, query):
 
     query = query + ' AND latest [PROP] NOT '\
         'partial-genome-representation [PROP]'
+
+    if typestrain:
+        query = query + ' AND "from type" [PROP]'
 
     command = [esearch, '-db', 'assembly', '-query', query]
 
@@ -1066,7 +1069,7 @@ def main():
     # assem_ids is a list of NCBI assembly IDs
     if args.intype == 'organism':
         assem_links = search_query(exes['esearch'], exes['efilter'],
-                                   args.type, args.query)
+                                   args.type, args.query, args.typestrain)
     elif args.intype == 'assembly_ids':
         assem_links = get_assem_links(exes['epost'], args.infile, args.type)
     elif args.intype == 'nuccore_ids':
