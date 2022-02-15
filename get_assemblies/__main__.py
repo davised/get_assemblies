@@ -635,7 +635,7 @@ def remove_invalid_characters(string):
     string = string.replace(':', '_')
     string = string.replace(';', '')
     string = string.replace('%', '')
-    string = string.replace('#', '.')
+    string = string.replace('#', '_')
     return string
 
 
@@ -778,7 +778,7 @@ def extract_metadata(force, metadata_append, outformat, typestrain, annotation,
                         name = item
                     elif json_key == 'assemblyname':
                         assem_name = item.replace(' ', '_')
-                        assem_name = assem_name
+                        assem_name = assem_name.replace('#', '_')
                     elif json_key == 'assemblystatus':
                         if item == 'Complete Genome':
                             annotation_type = 'genbank'
