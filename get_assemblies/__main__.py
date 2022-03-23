@@ -96,10 +96,9 @@ class DownloadEdirect(argparse.Action):
         out_file = os.path.join(dlpath, 'edirect.tar.gz')
         url = 'ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/edirect.tar.gz'
         dl_file(url, out_file)
-        logger.info(f'Installing edirect in {prefix}. Running setup.sh.')
+        logger.info(f'Installing edirect in {prefix}.')
         shutil.unpack_archive(out_file, dlpath, 'gztar')
         os.remove(out_file)
-        subprocess.run([os.path.join(prefix, 'setup.sh')])
         logger.info('Add given directory {} to [green]$PATH[/green] to '
                     'continue.'.format(prefix), extra={'markup': True})
         logger.info('This script will find ~/edirect by default.')
