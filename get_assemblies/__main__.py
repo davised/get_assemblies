@@ -74,10 +74,10 @@ OUTPUTS = ("fna", "ffn", "gff", "gbk", "faa")
 
 
 class DownloadEdirect(argparse.Action):
-    def __init__(self, nargs=None, **kw):
-        if nargs is not None:
+    def __init__(self, nargs=0, **kw):
+        if nargs != 0:
             raise ValueError("nargs not allowed")
-        super().__init__(**kw)
+        super().__init__(nargs=nargs, **kw)
 
     def __call__(self, parser, namespace, values, option_string=None):
         init_logger(True)
@@ -96,9 +96,7 @@ class DownloadEdirect(argparse.Action):
         url = "ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh"
         dl_file(url, out_file)
         logger.info(f"Installing edirect in {prefix}. Running install-edirect.sh.")
-        # shutil.unpack_archive(out_file, dlpath, 'gztar')
-        # os.remove(out_file)
-        subprocess.run([os.path.join(prefix, "install-edirect.sh")])
+        subprocess.run(['sh', out_file])
         logger.info(
             "Add given directory {} to [green]$PATH[/green] to "
             "continue.".format(prefix),
