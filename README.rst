@@ -36,8 +36,8 @@ Windows using `WSL
 <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
 get_assemblies depends on `NCBI Entrez Direct
-<https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_ which ~~requires Perl. Perl is
-installed by default on most \*nix systems.~~ If edirect is not currently
+<https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_ which **NO LONGER** requires Perl. Perl is
+installed by default on most \*nix systems. If edirect is not currently
 installed, please run ``get_assemblies --dledirect`` to install.
 
 .. code-block:: bash
