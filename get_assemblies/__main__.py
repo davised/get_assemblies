@@ -219,7 +219,7 @@ def run_argparse():
         "assembly_ids", help="Valid NCBI assembly IDs."
     )
     nuccore_ids = subparsers.add_parser(
-        "nuccore_ids", help="Valid NCBI nucleotide " "accessions."
+        "nuccore_ids", help="Valid NCBI nucleotide accessions."
     )
     json_input = subparsers.add_parser("json_input", help="Valid NCBI JSON docsums.")
 
@@ -776,6 +776,7 @@ def extract_metadata(
         "lastupdatedate",
         "coverage",
         "contign50",
+        "biosampleaccn",
     ]
     special_keys = ["isolate/strain", "sequence_type", "accession_type", "accession"]
     prefixes = {}
@@ -872,15 +873,15 @@ def extract_metadata(
                     "fragmented assembly",
                     "genome length too small",
                     "low gene count",
-                    "missing ribosomal protein " "genes",
+                    "missing ribosomal protein genes",
                     "missing rRNA genes",
-                    "missing tRNA " "genes",
+                    "missing tRNA genes",
                     "partial",
                     "untrustworthy as type",
                     "chimeric",
                     "hybrid",
                     "misassembled",
-                    "sequence " "duplications",
+                    "sequence duplications",
                     "unverified source organism",
                 ):
                     skip = True
