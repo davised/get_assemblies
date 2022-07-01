@@ -36,8 +36,8 @@ Windows using `WSL
 <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
 
 get_assemblies depends on `NCBI Entrez Direct
-<https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_ which requires Perl. Perl is
-installed by default on most \*nix systems. If edirect is not currently
+<https://www.ncbi.nlm.nih.gov/books/NBK179288/>`_ which ~~requires Perl. Perl is
+installed by default on most \*nix systems.~~ If edirect is not currently
 installed, please run ``get_assemblies --dledirect`` to install.
 
 .. code-block:: bash
@@ -83,7 +83,7 @@ Generally you will want to select a subset from your search. One way to do this
 is to select the lines that include the genomes of interest, and then saving
 the assembly accessions to a file. You can either delete the lines that you
 don't want, or use ``grep`` to pull out the lines that you want to keep. Then
-you can use ``cut -f 14 > accs.txt`` to get the assembly accesions in a file.
+you can use ``cut -f 15 > accs.txt`` to get the assembly accesions in a file.
 
 .. code-block:: bash
 
