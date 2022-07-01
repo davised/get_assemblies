@@ -19,7 +19,7 @@ benefit as well.
 PhD/Masters students and undergraduates are especially encouraged to submit
 issues if they are having trouble using this software.
 
-This software is written in python but has a perl dependency. I'm happy to help
+This software is written in python. I'm happy to help
 those who are having trouble with software installs.
 
 Windows users, please install WSL to make use of this software. Using a Linux
