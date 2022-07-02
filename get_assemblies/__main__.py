@@ -65,6 +65,7 @@ from concurrent.futures import as_completed
 from functools import partial
 from signal import signal, SIGPIPE, SIGINT, SIG_DFL
 from .__version__ import __version__
+from .biosample import BioSample, KEYS, get_bs2assemid
 
 signal(SIGPIPE, SIG_DFL)
 signal(SIGINT, SIG_DFL)
@@ -407,7 +408,7 @@ def validate_inputs(args):
         logger.debug("No edirect dir found.")
         edirect_dir = ""
 
-    utils = ["esearch", "efetch", "xtract", "efilter", "elink", "epost"]
+    utils = ["esearch", "efetch", "xtract", "efilter", "elink", "epost", "xml2json"]
     exes = {}
     for util in utils:
         if shutil.which(util):
@@ -809,6 +810,7 @@ def extract_metadata(
             annotation_type = "refseq"
             line = []
             skip = False
+            biosample = ''
             # Standard keys; only str/int return
             for json_key in json_keys:
                 try:
@@ -821,6 +823,8 @@ def extract_metadata(
                         line.append(str(item))
                     else:
                         line.append("-")
+                    if json_key == "biosampleaccn":
+                        biosample = item
                     if json_key == "fromtype":
                         if not item and typestrain:
                             skip = True
@@ -1042,6 +1046,7 @@ def extract_metadata(
                 "prefix": prefix,
                 "assem_name": assem_name,
                 "swap": False,
+                "biosample": biosample,
             }
             metadata.append(line)
     with open(metadata_file, open_mode) as metadatafh:
@@ -1049,6 +1054,75 @@ def extract_metadata(
             metadatafh.write("\t".join(line) + "\n")
 
     return dl_mapping
+
+
+def get_biosample_data(efetch, xml2json, bs2assemid):
+    # efetch -db biosample -mode xml | xml2json > biosamples.json
+    logger = logging.getLogger(__name__)
+    command = [f"{efetch}", "-db", "biosample", "-mode", "xml", "|", f"{xml2json}"]
+    try:
+        output = subprocess.run(
+            " ".join(command),
+            stdout=subprocess.PIPE,
+            shell=True,
+            text=True,
+            input="\n".join(sorted(bs2assemid.keys())),
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        logger.critical("There was an error running efetch.")
+        logger.critical(f'Check the error: "{e}" and try again.')
+        exit(1)
+    bsjson = json.loads(output.stdout)["BioSampleSet"]["BioSample"]
+    try:
+        with open(".biosamplejson", "wt") as bsjsonfh:
+            bsjsonfh.write(output.stdout)
+    except UnboundLocalError:
+        pass
+    biosamples = []
+    for uid in bsjson.keys():
+        acc = bsjson[uid]["accession"]
+        bs = BioSample(acc, bs2assemid[acc])
+        attrs = bsjson[uid]["Attributes"]["Attribute"]
+        if isinstance(attrs, list):
+            for attr in attrs:
+                try:
+                    name = attr['attribute_name']
+                except TypeError:
+                    pass
+                else:
+                    if name in KEYS:
+                        setattr(bs, name, attr['content'])
+                    elif name in ('sample name', 'strain', 'isolate'):
+                        if bs.isolate == '-':
+                            setattr(bs, 'isolate', attr['content'])
+        elif isinstance(attrs, dict):
+            try:
+                name = attrs['attribute_name']
+            except TypeError:
+                pass
+            else:
+                if name in KEYS:
+                    setattr(bs, name, attrs['content'])
+                elif name in ('sample name', 'strain', 'isolate'):
+                    if bs.isolate == '-':
+                        setattr(bs, 'isolate', attrs['content'])
+        biosamples.append(bs)
+    with open("biosample.tab", "w") as bsfh:
+        header = ["biosample_acc", "assemid", "isolate"]
+        header.extend(KEYS)
+        bsfh.write("\t".join(header))
+        bsfh.write("\n")
+        for bs in sorted(biosamples, key=lambda x: x.acc):
+            line = [
+                bs.acc,
+                bs.assemid,
+                bs.isolate,
+            ]
+            for attr in KEYS:
+                line.append(getattr(bs, attr, "-"))
+            bsfh.write("\t".join(line))
+            bsfh.write("\n")
 
 
 def download_genomes(o, dl_mapping, threads):
@@ -1157,6 +1231,8 @@ def main():
             docsums,
             args.keepmulti,
         )
+        bs2assemid = get_bs2assemid(dl_mapping)
+        get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid)
 
     if "genomes" in args.function:
         download_genomes(args.o, dl_mapping, args.threads)
