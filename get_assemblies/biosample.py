@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import rich.repr
 from rich.console import Console
 from rich.pretty import pprint
 
