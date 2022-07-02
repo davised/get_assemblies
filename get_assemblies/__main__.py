@@ -1056,7 +1056,11 @@ def extract_metadata(
     return dl_mapping
 
 
-def get_biosample_data(efetch, xml2json, bs2assemid):
+def get_biosample_data(efetch, xml2json, bs2assemid, metadata_append: bool = False):
+    if metadata_append:
+        open_mode = "at"
+    else:
+        open_mode = "wt"
     # efetch -db biosample -mode xml | xml2json > biosamples.json
     logger = logging.getLogger(__name__)
     command = [f"{efetch}", "-db", "biosample", "-mode", "xml", "|", f"{xml2json}"]
@@ -1075,7 +1079,7 @@ def get_biosample_data(efetch, xml2json, bs2assemid):
         exit(1)
     bsjson = json.loads(output.stdout)["BioSampleSet"]["BioSample"]
     try:
-        with open(".biosamplejson", "wt") as bsjsonfh:
+        with open(".biosamplejson", open_mode) as bsjsonfh:
             bsjsonfh.write(output.stdout)
     except UnboundLocalError:
         pass
@@ -1108,11 +1112,15 @@ def get_biosample_data(efetch, xml2json, bs2assemid):
                     if bs.isolate == '-':
                         setattr(bs, 'isolate', attrs['content'])
         biosamples.append(bs)
-    with open("biosample.tab", "w") as bsfh:
+    write_header = True
+    if metadata_append and os.path.exists("biosample.tab"):
+        write_header = False
+    with open("biosample.tab", open_mode) as bsfh:
         header = ["biosample_acc", "assemid", "isolate"]
         header.extend(KEYS)
-        bsfh.write("\t".join(header))
-        bsfh.write("\n")
+        if write_header:
+            bsfh.write("\t".join(header))
+            bsfh.write("\n")
         for bs in sorted(biosamples, key=lambda x: x.acc):
             line = [
                 bs.acc,
@@ -1232,7 +1240,7 @@ def main():
             args.keepmulti,
         )
         bs2assemid = get_bs2assemid(dl_mapping)
-        get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid)
+        get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid, args.metadata_append)
 
     if "genomes" in args.function:
         download_genomes(args.o, dl_mapping, args.threads)
