@@ -105,7 +105,7 @@ class DownloadEdirect(argparse.Action):
         )
         logger.info("This script will find ~/edirect by default.")
         logger.info(
-            "Alternatively, set [green]$EDIRECT[/green] environment " "variable.",
+            "Alternatively, set [green]$EDIRECT[/green] environment variable.",
             extra={"markup": True},
         )
         parser.exit()
@@ -288,7 +288,7 @@ def run_argparse():
     for p in p_assemlinks:
         p.add_argument(
             "--function",
-            help="check counts, download metadata," " or genomes. [check]",
+            help="check counts, download metadata, or genomes. [check]",
             type=str,
             default=["check"],
             choices=["check", "metadata", "genomes"],
@@ -317,7 +317,7 @@ def run_argparse():
         )
         p.add_argument(
             "--keepmulti",
-            help="By default, genomes from large multi-isolate" "studies are removed.",
+            help="By default, genomes from large multi-isolate studies are removed.",
             action="store_true",
             default=False,
         )
@@ -451,7 +451,7 @@ def search_query(esearch, efilter, qtype, query, typestrain):
     elif qtype == "ID":
         query = f"txid{query}[ORGN]"
 
-    query = query + " AND latest [PROP] NOT " "partial-genome-representation [PROP]"
+    query = query + " AND latest [PROP] NOT partial-genome-representation [PROP]"
 
     if typestrain:
         query = query + ' AND "from type" [PROP]'
@@ -989,7 +989,7 @@ def extract_metadata(
                         annotation_type = "refseq"
                     else:
                         logger.critical(
-                            f"Unable to find annotation for {strain}." " Skipping..."
+                            f"Unable to find annotation for {strain}. Skipping..."
                         )
                         continue
                 elif annotation_type == "refseq":
@@ -1000,7 +1000,7 @@ def extract_metadata(
                         annotation_type = "genbank"
                     else:
                         logger.critical(
-                            f"Unable to find annotation for {strain}." " Skipping..."
+                            f"Unable to find annotation for {strain}. Skipping..."
                         )
                         continue
 
@@ -1024,7 +1024,7 @@ def extract_metadata(
             else:
                 acc_type += annotation_type
             if not accession:
-                logger.warning(f"Unable to find accession for {uid}. " "Skipping...")
+                logger.warning(f"Unable to find accession for {uid}. Skipping...")
                 continue
             else:
                 line.append(annotation_type)
