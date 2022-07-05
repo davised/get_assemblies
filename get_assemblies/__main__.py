@@ -111,6 +111,21 @@ class DownloadEdirect(argparse.Action):
         parser.exit()
 
 
+def extract_attribute(bs: BioSample, attr: dict):
+    try:
+        name = attr['attribute_name']
+    except TypeError:
+        pass
+    else:
+        if name in KEYS:
+            setattr(bs, name, attr['content'])
+        elif name in ('sample name', 'strain', 'isolate'):
+            if attr['content'] == 'not applicable':
+                pass
+            elif bs.isolate == '-':
+                setattr(bs, 'isolate', attr['content'])
+
+
 def dl_file(url, out_file):
     logger = logging.getLogger(__name__)
     logger.debug("Downloading file {} to {}".format(url, out_file))
@@ -1090,27 +1105,9 @@ def get_biosample_data(efetch, xml2json, bs2assemid, metadata_append: bool = Fal
         attrs = bsjson[uid]["Attributes"]["Attribute"]
         if isinstance(attrs, list):
             for attr in attrs:
-                try:
-                    name = attr['attribute_name']
-                except TypeError:
-                    pass
-                else:
-                    if name in KEYS:
-                        setattr(bs, name, attr['content'])
-                    elif name in ('sample name', 'strain', 'isolate'):
-                        if bs.isolate == '-':
-                            setattr(bs, 'isolate', attr['content'])
+                extract_attribute(bs, attr)
         elif isinstance(attrs, dict):
-            try:
-                name = attrs['attribute_name']
-            except TypeError:
-                pass
-            else:
-                if name in KEYS:
-                    setattr(bs, name, attrs['content'])
-                elif name in ('sample name', 'strain', 'isolate'):
-                    if bs.isolate == '-':
-                        setattr(bs, 'isolate', attrs['content'])
+            extract_attribute(bs, attrs)
         biosamples.append(bs)
     write_header = True
     if metadata_append and os.path.exists("biosample.tab"):
