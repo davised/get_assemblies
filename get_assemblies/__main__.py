@@ -353,6 +353,10 @@ def run_argparse():
             choices=["fna", "ffn", "gff", "gbk", "faa", "all"],
             nargs="+",
         )
+        p.add_argument(
+            "--no-biosample", help="Turn off biosample data.", action="store_true",
+            dest="biosample"
+        )
         p.add_argument("--edirect", help="Path to edirect directory.", type=edirect_dir)
         p.add_argument(
             "--debug", help="Turn on debugging messages.", action="store_true"
@@ -1024,9 +1028,17 @@ def extract_metadata(
             try:
                 accession = synonym[annotation_type]
             except KeyError:
-                accession = ""
-            else:
-                acc_type += annotation_type
+                accession = ''
+            if not accession:
+                if annotation_type == "refseq":
+                    annotation_type = "genbank"
+                elif annotation_type == "genbank":
+                    annotation_type = "refseq"
+            try:
+                accession = synonym[annotation_type]
+            except KeyError:
+                accession = ''
+            acc_type += annotation_type
             if not accession:
                 logger.warning(f"Unable to find accession for {uid}. Skipping...")
                 continue
@@ -1104,9 +1116,16 @@ def get_biosample_data(efetch, xml2json, bs2assemid, metadata_append: bool = Fal
         pass
     biosamples = []
     for uid in bsjson.keys():
-        acc = bsjson[uid]["accession"]
+        if isinstance(bsjson, list):
+            acc = bsjson[uid]["accession"]
+            attrs = bsjson[uid]["Attributes"]["Attribute"]
+        elif isinstance(bsjson, dict):
+            acc = bsjson["accession"]
+            attrs = bsjson["Attributes"]["Attribute"]
+        else:
+            logger.warning(f"Unable to find accession for {uid}. Skipping...")
+            continue
         bs = BioSample(acc, bs2assemid[acc])
-        attrs = bsjson[uid]["Attributes"]["Attribute"]
         if isinstance(attrs, list):
             for attr in attrs:
                 extract_attribute(bs, attr)
@@ -1242,8 +1261,9 @@ def main():
             docsums,
             args.keepmulti,
         )
-        bs2assemid = get_bs2assemid(dl_mapping)
-        get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid, args.metadata_append)
+        if not args.biosample:
+            bs2assemid = get_bs2assemid(dl_mapping)
+            get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid, args.metadata_append)
 
     if "genomes" in args.function:
         download_genomes(args.o, dl_mapping, args.threads)
