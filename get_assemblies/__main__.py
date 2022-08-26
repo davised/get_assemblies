@@ -60,6 +60,7 @@ from rich.progress import (
     Progress,
     track,
 )
+from rich.traceback import install
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from functools import partial
@@ -69,6 +70,7 @@ from .biosample import BioSample, KEYS, get_bs2assemid
 
 signal(SIGPIPE, SIG_DFL)
 signal(SIGINT, SIG_DFL)
+install(show_locals=True)
 
 NOT_WHITESPACE = re.compile(r"[^\s]")
 OUTPUTS = ("fna", "ffn", "gff", "gbk", "faa")
