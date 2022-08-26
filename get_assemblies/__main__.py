@@ -484,6 +484,8 @@ def get_assem_links(epost, infile, qtype):
     command = [epost, "-db", "assembly", "-format", f"{qtype}"]
 
     # command = ' '.join(command)
+    logger.info('Getting assembly links. This may take a while.')
+    logger.debug(' '.join(command))
     try:
         output = subprocess.run(
             command,
@@ -1201,6 +1203,8 @@ def download_genomes(o, dl_mapping, threads):
 
 def main():
     args = run_argparse()
+    logger = logging.getLogger(__name__)
+    logger.info(f'Welcome to get_assemblies v{__version__}!')
     args, exes = validate_inputs(args)
 
     # assem_ids is a list of NCBI assembly IDs
