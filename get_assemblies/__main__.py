@@ -354,7 +354,7 @@ def run_argparse():
             nargs="+",
         )
         p.add_argument(
-            "--no-biosample", help="Turn off biosample data.", action="store_true",
+            "--biosample", help="Turn on biosample data.", action="store_true",
             dest="biosample"
         )
         p.add_argument("--edirect", help="Path to edirect directory.", type=edirect_dir)
@@ -1261,7 +1261,7 @@ def main():
             docsums,
             args.keepmulti,
         )
-        if not args.biosample:
+        if args.biosample:
             bs2assemid = get_bs2assemid(dl_mapping)
             get_biosample_data(exes["efetch"], exes["xml2json"], bs2assemid, args.metadata_append)
 
